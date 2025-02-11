@@ -51,7 +51,7 @@ is_ignored_by_gitignore() {
 }
 
 # Iterate over the specified file types
-FILE_EXTENSIONS=("*.txt" "*.md" "*.py" "*.yaml" "*.template" "*.toml" "Makefile")
+FILE_EXTENSIONS=("*.txt" "*.md" "*.py" "*.yaml" "*.template" "*.toml" "Makefile", "*.ts", "*.tsx", "*.mdx", "*.js", "*.jsx")
 FILES_ADDED=0
 FILES_PROCESSED=0
 
