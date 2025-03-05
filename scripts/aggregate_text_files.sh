@@ -2,6 +2,7 @@
 
 # Name: aggregate_text_files.sh
 # Description: Aggregates non-hidden text files in a given directory and its subdirectories into a single timestamped file, respecting .gitignore.
+#              This refactored version omits processing anything under _transient-files and avoids recursing into already-aggregated files.
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <path>"
@@ -26,7 +27,7 @@ if [ ! -d "$TRANSIENT_DIR" ]; then
     echo "Created directory: $TRANSIENT_DIR"
 fi
 
-# Initialize the output file
+# Initialize the output file if it doesn't exist
 if [ ! -f "$OUTPUT_FILE" ]; then
     > "$OUTPUT_FILE"
     echo "Created output file: $OUTPUT_FILE"
@@ -50,39 +51,38 @@ is_ignored_by_gitignore() {
     return 1
 }
 
-# Iterate over the specified file types
-FILE_EXTENSIONS=("*.txt" "*.md" "*.py" "*.yaml" "*.template" "*.toml" "Makefile", "*.ts", "*.tsx", "*.mdx", "*.js", "*.jsx")
+# Define file extensions to search for (fixed array syntax)
+FILE_EXTENSIONS=("*.txt" "*.md" "*.py" "*.yaml" "*.template" "*.toml" "Makefile" "*.ts" "*.tsx" "*.mdx" "*.js" "*.jsx")
 FILES_ADDED=0
 FILES_PROCESSED=0
 
+# Loop over each file extension and use find to exclude transient files
 for EXT in "${FILE_EXTENSIONS[@]}"; do
-    find "$INPUT_PATH" -type f -name "$EXT" ! -name ".*" | while read -r FILE; do
+    while IFS= read -r FILE; do
         FILEPATH=$(realpath "$FILE")
-
-        # Skip files in the transient directory or ignored by .gitignore
-        if [[ "$FILEPATH" == *"$TRANSIENT_DIR"* ]] || is_ignored_by_gitignore "$FILEPATH"; then
+        
+        # Skip if file is in the transient directory or ignored by .gitignore
+        if [[ "$FILEPATH" == "$TRANSIENT_DIR"* ]] || is_ignored_by_gitignore "$FILEPATH"; then
             continue
         fi
-
+        
         ((FILES_PROCESSED++))
-
+        
         if file_already_added "$FILEPATH"; then
             echo "Skipping already added file: $FILEPATH"
             continue
         fi
-
+        
         echo "Processing: $FILEPATH"
-
         FILENAME=$(basename "$FILE")
         echo "here is $FILEPATH:" >> "$OUTPUT_FILE"
         echo "<$FILENAME>" >> "$OUTPUT_FILE"
         cat "$FILE" >> "$OUTPUT_FILE"
         echo "</$FILENAME>" >> "$OUTPUT_FILE"
         echo "" >> "$OUTPUT_FILE"
-
+        
         ((FILES_ADDED++))
-    done
-
+    done < <(find "$INPUT_PATH" -type f -name "$EXT" ! -path "${TRANSIENT_DIR}/*" ! -name ".*")
 done
 
 if [ $FILES_PROCESSED -eq 0 ]; then
