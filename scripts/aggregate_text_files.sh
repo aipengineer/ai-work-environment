@@ -10,6 +10,13 @@ if [ -z "$1" ]; then
 fi
 
 INPUT_PATH="$1"
+
+# Check if the provided path is a valid directory
+if [ ! -d "$INPUT_PATH" ]; then
+    echo "incorrect path"
+    exit 1
+fi
+
 TRANSIENT_DIR="${INPUT_PATH}/_transient-files"
 TIMESTAMP=$(date +%Y-%m-%d)
 DIRECTORY_NAME=$(basename "$INPUT_PATH")
