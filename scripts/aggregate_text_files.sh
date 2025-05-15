@@ -2,14 +2,17 @@
 
 # Name: aggregate_text_files.sh
 # Description: Aggregates non-hidden text files in a given directory and its subdirectories into a single timestamped file, respecting .gitignore.
-#              This refactored version omits processing anything under _transient-files and avoids recursing into already-aggregated files.
+#              This refactored version normalizes the input path (removing any trailing slash) to ensure consistent behavior whether or not a trailing slash is provided.
+#              It also omits processing anything under _transient-files, avoids recursing into already-aggregated files,
+#              and skips any file whose name starts with "deprecated_".
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <path>"
     exit 1
 fi
 
-INPUT_PATH="$1"
+# Normalize the input path using realpath to ensure a consistent, canonical format regardless of trailing slash.
+INPUT_PATH=$(realpath "$1")
 
 # Check if the provided path is a valid directory
 if [ ! -d "$INPUT_PATH" ]; then
@@ -72,6 +75,13 @@ for EXT in "${FILE_EXTENSIONS[@]}"; do
         if [[ "$FILEPATH" == "$TRANSIENT_DIR"* ]] || is_ignored_by_gitignore "$FILEPATH"; then
             continue
         fi
+
+        # Skip files that start with "deprecated_"
+        FILENAME=$(basename "$FILE")
+        if [[ "$FILENAME" == deprecated_* ]]; then
+            echo "Skipping deprecated file: $FILEPATH"
+            continue
+        fi
         
         ((FILES_PROCESSED++))
         
@@ -81,7 +91,6 @@ for EXT in "${FILE_EXTENSIONS[@]}"; do
         fi
         
         echo "Processing: $FILEPATH"
-        FILENAME=$(basename "$FILE")
         echo "here is $FILEPATH:" >> "$OUTPUT_FILE"
         echo "<$FILENAME>" >> "$OUTPUT_FILE"
         cat "$FILE" >> "$OUTPUT_FILE"
